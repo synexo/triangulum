@@ -2,35 +2,11 @@
 var numPages = 10000;
 var numGlyphs = 5;
 
+ws = require("./lib/webserver.js");
+var arc = require("./lib/archetypes.js");
+var scribe = require("./lib/scribe.js");
+
 var now = require("performance-now");
-
-var redis = require("redis");
-var redisClient = redis.createClient(6379, '127.0.0.1');
-
-var express = require("express");
-var api = express();
-api.use(express.static("public"));
-
-var http = require("http").Server(api);
-var io = require("socket.io")(http);
-
-io.on("connection", function(socket) {
-    console.log('socket connection');
-    socket.emit('message', 'Welcome!');
-    socket.on("disconnect", function() {
-        console.log("socket disconnection");
-    });
-});
-
-
-http.listen(8080, function() {
-    console.log("listening on port 8080");
-});
-
-api.get('/api/', function (req, res) {
-    res.json(shelf.book[req.query['page']]);
-    console.log(req.query);
-});
 
 function flip(book, interval, lastNow) {
     var startNow = now();
@@ -53,38 +29,6 @@ function flip(book, interval, lastNow) {
     setTimeout(flip, timeOut, book, interval, startNow);
 };
 
-
-function scribe(book, interval) {
-    console.log('Saving');
-    io.sockets.emit('message', book[1]);
-
-    redisSave = [];
-
-    for (var page in book) {
-        var data = JSON.stringify(book[page]);
-        redisSave.push(page, data);
-    };
-
-    redisClient.mset(redisSave, function (err, res) {
-        console.log('Saved');
-        setTimeout(scribe, interval, book, interval);
-    }.bind( {book: book, interval: interval} ));
-
-};
-
-function matter() {
-    this.archetype = 'matter';
-    this.age = 0;
-
-    this.decay = function(timePassed) {
-        this.age = this.age + (timePassed/100);
-    };
-
-    this.act = function(timePassed) {
-        this.decay(timePassed);
-    };
-};
-
 function page() {
     this.glyphs = [];
     this.scry = function(timePassed) {
@@ -100,7 +44,7 @@ function main() {
     for (var i=0; i<numPages; i++) {
         var testPage = new page();
         for (var o=0; o<numGlyphs; o++) {
-            var testGlyph = new matter();
+            var testGlyph = new arc.matter();
             testPage.glyphs.push(testGlyph);
         };
         book.push(testPage);
@@ -109,6 +53,6 @@ function main() {
     scribe(book, 10000);
 };
 
-var shelf = new main();
+shelf = new main();
 
 //process.exit();
