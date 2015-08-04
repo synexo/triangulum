@@ -23,21 +23,22 @@ function flip(book, interval, lastNow) {
     if (latency < 0) {latency = 0};
    
     for (var page in book) {
-        book[page].scribe(timePassed);
+        book[page].scry(timePassed);
     };
 
     var endNow = now();
     var execTime = endNow - startNow;
     var timeOut = interval - execTime - latency;
-    if (timeOut < 0) {timeOut = 0};
-
-    console.log("time", startNow, "timePassed", timePassed, "latency", latency, "execTime", execTime, "timeOut", timeOut);
+    if (timeOut < 0) {
+        timeOut = 0;
+        console.log("time", startNow, "timePassed", timePassed, "latency", latency, "execTime", execTime, "timeOut", timeOut);
+    };
 
     setTimeout(flip, timeOut, book, interval, startNow);
 };
 
 
-function save(book, interval) {
+function scribe(book, interval) {
     console.log('Saving');
     redisSave = [];
 
@@ -48,7 +49,7 @@ function save(book, interval) {
 
     redisClient.mset(redisSave, function (err, res) {
         console.log('Saved');
-        setTimeout(save, interval, book, interval);
+        setTimeout(scribe, interval, book, interval);
     }.bind( {book: book, interval: interval} ));
 
 };
@@ -68,7 +69,7 @@ function matter() {
 
 function page() {
     this.glyphs = [];
-    this.scribe = function(timePassed) {
+    this.scry = function(timePassed) {
         for (var glyph in this.glyphs) {
             this.glyphs[glyph].act(timePassed);
         };
@@ -87,7 +88,7 @@ function main() {
         book.push(testPage);
     };
     flip(book, 50, 0);
-    save(book, 10000);
+    scribe(book, 10000);
 };
 
 var global = new main();
