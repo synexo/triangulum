@@ -5,9 +5,17 @@ var book = [];
 
 var now = require("performance-now");
 
+var redis = require("redis");
+var redisClient = redis.createClient(6379, '127.0.0.1');
+
+var express = require("express");
+var api = express();
+var http = require("http").Server(api);
+var io = require("socket.io")(http);
+
 var arc = require("./lib/archetypes.js");
-var ws = require("./lib/webserver.js")(book);
-var scribe = require("./lib/scribe.js")(ws);
+var ws = require("./lib/webserver.js")(book, express, api, http, io);
+var scribe = require("./lib/scribe.js")(ws, redisClient);
 
 function flip(book, interval, lastNow) {
     var startNow = now();
