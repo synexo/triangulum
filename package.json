@@ -1,0 +1,25 @@
+{
+  "name": "triangulum",
+  "version": "0.0.0",
+  "description": "Copyright 2015 Joseph Quinn. All rights reserved.",
+  "main": "tri.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/synexo/triangulum.git"
+  },
+  "author": "",
+  "license": "BSD",
+  "bugs": {
+    "url": "https://github.com/synexo/triangulum/issues"
+  },
+  "dependencies": {
+    "express": "~4.13.3",
+    "redis": "~0.12.1",
+    "hiredis": "~0.4.0",
+    "performance-now": "~0.2.0",
+    "socket.io": "~1.3.6"
+  }
+}
