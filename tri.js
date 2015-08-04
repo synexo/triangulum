@@ -19,7 +19,7 @@ http.listen(8080, function() {
     console.log("listening on port 8080");
 });
 
-api.get('/', function (req, res) {
+api.get('/node/', function (req, res) {
     res.send(shelf.book[req.query['page']]);
     console.log(req.query);
 });
