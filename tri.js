@@ -27,7 +27,7 @@ http.listen(8080, function() {
 });
 
 api.get('/api/', function (req, res) {
-    res.send(shelf.book[req.query['page']]);
+    res.json(shelf.book[req.query['page']]);
     console.log(req.query);
 });
 
