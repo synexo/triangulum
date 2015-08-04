@@ -53,6 +53,5 @@ function main(book) {
     scribe(book, 10000);
 };
 
-
-main(book);
+shelf = main(book);
 //process.exit();
