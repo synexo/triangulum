@@ -7,12 +7,20 @@ var now = require("performance-now");
 var redis = require("redis");
 var redisClient = redis.createClient(6379, '127.0.0.1');
 
-var express = require("express");
-var api = express();
-var apiServer = api.listen(8080, function() { console.log('Listening...') });
+var api = require("express")();
+var http = require("http").Server(api);
+var io = require("socket.io")(http);
+
+io.on("connection", function(socket) {
+    console.log('socket connection');
+});
+
+http.listen(8080, function() {
+    console.log("listening on port 8080");
+});
 
 api.get('/', function (req, res) {
-    res.send(global.book[req.query['page']]);
+    res.send(shelf.book[req.query['page']]);
     console.log(req.query);
 });
 
@@ -91,6 +99,6 @@ function main() {
     scribe(book, 10000);
 };
 
-var global = new main();
+var shelf = new main();
 
 //process.exit();
