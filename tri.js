@@ -16,6 +16,7 @@ var io = require("socket.io")(http);
 
 io.on("connection", function(socket) {
     console.log('socket connection');
+    socket.emit('message', 'Welcome!');
     socket.on("disconnect", function() {
         console.log("socket disconnection");
     });
@@ -55,6 +56,8 @@ function flip(book, interval, lastNow) {
 
 function scribe(book, interval) {
     console.log('Saving');
+    io.sockets.emit('message', book[1]);
+
     redisSave = [];
 
     for (var page in book) {

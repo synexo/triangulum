@@ -1,4 +1,8 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
-  var socket = io();
+    console.log('test');
+    var socket = io();
+    socket.on('message', function (msg) {
+        console.log(JSON.stringify(msg));
+    });
 </script>
