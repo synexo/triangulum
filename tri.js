@@ -7,7 +7,10 @@ var now = require("performance-now");
 var redis = require("redis");
 var redisClient = redis.createClient(6379, '127.0.0.1');
 
-var api = require("express")();
+var express = require("express");
+var api = express();
+api.use(express.static("public"));
+
 var http = require("http").Server(api);
 var io = require("socket.io")(http);
 
