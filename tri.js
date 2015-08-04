@@ -1,12 +1,13 @@
 #!/usr/bin/node
 var numPages = 10000;
 var numGlyphs = 5;
-
-ws = require("./lib/webserver.js");
-var arc = require("./lib/archetypes.js");
-var scribe = require("./lib/scribe.js");
+var book = [];
 
 var now = require("performance-now");
+
+var arc = require("./lib/archetypes.js");
+var ws = require("./lib/webserver.js")(book);
+var scribe = require("./lib/scribe.js")(ws);
 
 function flip(book, interval, lastNow) {
     var startNow = now();
@@ -38,9 +39,8 @@ function page() {
     };
 };
 
-function main() {
-    var book = [];
-    this.book = book;
+
+function main(book) {
     for (var i=0; i<numPages; i++) {
         var testPage = new page();
         for (var o=0; o<numGlyphs; o++) {
@@ -53,6 +53,6 @@ function main() {
     scribe(book, 10000);
 };
 
-shelf = new main();
 
+main(book);
 //process.exit();
