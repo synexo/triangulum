@@ -1,4 +1,6 @@
 #!/bin/bash
+LOG='/home/node/triangulum/logs/tri.log'
+./node_modules/forever/bin/forever list | grep 'tri\.js' && ./stop.sh
 case "$1" in
     "push")
         git add --all *
@@ -6,4 +8,4 @@ case "$1" in
         git push origin master
         ;;
 esac
-./node_modules/forever/bin/forever start tri.js
+./node_modules/forever/bin/forever -a -l $LOG -o $LOG -e $LOG start tri.js
