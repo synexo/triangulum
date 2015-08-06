@@ -25,8 +25,8 @@ socket.on('page', function (msg) {
     console.log(JSON.stringify(msg));
 });
 
-socket.on('connId', function (msg) {
-    myReader.connId = msg;
+socket.on('id', function (msg) {
+    myReader.id = msg;
 });
 
 setInterval( function () {socket.emit('myReader', myReader);}, 1000);
