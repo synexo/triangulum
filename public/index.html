@@ -5,4 +5,14 @@
     socket.on('message', function (msg) {
         console.log(JSON.stringify(msg));
     });
+
+
+    function viewer() {
+        this.page = '1';
+    };
+
+    myself = new viewer();
+
+    socket.emit('message', myself);
+
 </script>

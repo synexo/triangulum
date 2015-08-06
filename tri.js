@@ -2,21 +2,21 @@
 var numPages = 10000;
 var numGlyphs = 5;
 var book = [];
-var sockets = [];
+var readers = {};
 
-var now = require("performance-now");
+var now = require('performance-now');
 
-var redis = require("redis");
+var redis = require('redis');
 var redisClient = redis.createClient(6379, '127.0.0.1');
 
-var express = require("express");
+var express = require('express');
 var api = express();
-var http = require("http").Server(api);
-var io = require("socket.io")(http);
+var http = require('http').Server(api);
+var io = require('socket.io')(http);
 
-var arc = require("./lib/archetypes.js");
-var ws = require("./lib/webserver.js")(book, express, api, http, io, sockets);
-var scribe = require("./lib/scribe.js")(ws, redisClient);
+var arc = require('./lib/archetypes.js');
+var ws = require('./lib/webserver.js')(book, now, express, api, http, io, readers);
+var scribe = require('./lib/scribe.js')(redisClient);
 
 function flip(book, interval, lastNow) {
     var startNow = now();
@@ -33,7 +33,7 @@ function flip(book, interval, lastNow) {
     var timeOut = interval - execTime - latency;
     if (timeOut < 0) {
         timeOut = 0;
-        console.log("time", startNow, "timePassed", timePassed, "latency", latency, "execTime", execTime, "timeOut", timeOut);
+        console.log('time', startNow, 'timePassed', timePassed, 'latency', latency, 'execTime', execTime, 'timeOut', timeOut);
     };
 
     setTimeout(flip, timeOut, book, interval, startNow);
