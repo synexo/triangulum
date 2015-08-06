@@ -2,7 +2,7 @@
 var numPages = 10000;
 var numGlyphs = 5;
 var book = [];
-var readers = {};
+var sockets = {};
 
 var now = require('performance-now');
 
@@ -15,7 +15,7 @@ var http = require('http').Server(api);
 var io = require('socket.io')(http);
 
 var arc = require('./lib/archetypes.js');
-var ws = require('./lib/webserver.js')(book, now, express, api, http, io, readers);
+var ws = require('./lib/webserver.js')(book, now, express, api, http, io, sockets);
 var scribe = require('./lib/scribe.js')(redisClient);
 
 function flip(book, interval, lastNow) {

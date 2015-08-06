@@ -13,5 +13,5 @@ esac
 rsync -av /home/node/triangulum/ /home/node/backups/$DATE >/dev/null
 
 ./node_modules/forever/bin/forever list | grep 'tri\.js' && ./stop.sh
-./node_modules/forever/bin/forever -a -l $LOG -o $LOG -e $LOG start tri.js
+./node_modules/forever/bin/forever -a -o $LOG -e $LOG start tri.js
 tail -f logs/tri.log
