@@ -1,10 +1,9 @@
-function reader() {
-    this.viewPages = [];
-    this.viewPages.push('1');
-    this.viewPages.push('2');
+function viewer() {
+    this.sectors = [];
+    this.sectors.push({"x": 0, "y": 0});
 };
 
-myReader = new reader();
+view = new viewer();
 
 
 var socket = io();
@@ -21,12 +20,12 @@ socket.on('message', function (msg) {
     console.log(JSON.stringify(msg));
 });
 
-socket.on('page', function (msg) {
+socket.on('sector', function (msg) {
     console.log(JSON.stringify(msg));
 });
 
 socket.on('id', function (msg) {
-    myReader.id = msg;
+    view.id = msg;
 });
 
-setInterval( function () {socket.emit('myReader', myReader);}, 1000);
+setInterval( function () {socket.emit('view', view);}, 1000);

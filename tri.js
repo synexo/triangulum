@@ -2,6 +2,7 @@
 var numPages = 10000;
 var numGlyphs = 5;
 var book = [];
+var sectors = {};
 var sockets = {};
 
 var now = require('performance-now');
@@ -15,7 +16,7 @@ var http = require('http').Server(api);
 var io = require('socket.io')(http);
 
 var arc = require('./lib/archetypes.js');
-var ws = require('./lib/webserver.js')(book, now, express, api, http, io, sockets);
+var ws = require('./lib/webserver.js')(book, now, express, api, http, io, sockets, sectors);
 var scribe = require('./lib/scribe.js')(redisClient);
 
 function flip(book, interval, lastNow) {
@@ -50,6 +51,7 @@ function page() {
 
 
 function main(book) {
+/*
     for (var i=0; i<numPages; i++) {
         var testPage = new page();
         for (var o=0; o<numGlyphs; o++) {
@@ -57,6 +59,17 @@ function main(book) {
             testPage.glyphs.push(testGlyph);
         };
         book.push(testPage);
+    };
+*/
+    for (var x=-50; x<50; x++) {
+        sectors[x] = {};
+        for (var y=-50; y<50; y++) {
+            var testPage = new page();
+            var testGlyph = new arc.matter();
+            testPage.glyphs.push(testGlyph);
+            book.push(testPage);
+            sectors[x][y] = testPage;
+        };
     };
     flip(book, 50, 0);
     scribe(book, 10000);
