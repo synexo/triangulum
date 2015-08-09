@@ -195,7 +195,7 @@ World.prototype.setupEnvironment = function () {
 
     for (var i = 0; i < particleCount; i++) {
         geometry.vertices.push(new THREE.Vector3(
-        (Math.random() - 0.5) * 25000, (Math.random() - 0.5) * 1000, (Math.random() - 0.5) * 25000));
+        (Math.sqrt(Math.random() - 0.5) * 25000), (Math.random() - 0.5) * 1000, Math.sqrt((Math.random() - 0.5) * 25000)));
         attributes.texIndex.value.push(Math.random() * 3 | 0);
         attributes.color.value.push(new THREE.Color(Math.random(),Math.random(),Math.random()));
         attributes.size.value.push(Math.random() * 50);
@@ -215,11 +215,11 @@ World.prototype.setupEnvironment = function () {
 };
 
 World.prototype.render = function () {
-    this.container.rotation.x += 0.0001;
-    this.container.rotation.y += 0.0002;
-    this.container.rotation.z += 0.0003;
+    //this.container.rotation.x += 0.0001;
+    //this.container.rotation.y += 0.0002;
+    //this.container.rotation.z += 0.0003;
     this.uniforms.uTime.value += 0.01;
-    this.camera.position.z = 1000 + Math.abs(Math.sin(this.uniforms.uTime.value/10))*7500;
+    this.camera.position.z = Math.abs(Math.sin(this.uniforms.uTime.value/100))*25000;
     controls.update();
     stats.update();
     this.renderer.render(this.scene, this.camera);
