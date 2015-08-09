@@ -1,0 +1,224 @@
+<body>
+<script type="text/javascript" src="js/three.min.js"></script>
+<script type="text/javascript" src="js/Stats.js"></script>
+<script type="text/javascript" src="js/OrbitControls.js"></script>
+<script id="vertexShader" type="x-shader/x-vertex">
+    uniform float scale;
+    uniform float uTime;
+
+    attribute vec3 color;
+    attribute float texIndex;
+    attribute float size;
+    attribute float alpha;
+    attribute float angle;
+    attribute float rotation;
+    attribute float pulse;
+    attribute float pulseRate;
+    attribute float blink;
+
+    varying vec3 vColor;
+    varying float vTexIndex;
+    varying float vSize;
+    varying float vAlpha;
+    varying float vAngle;
+    varying float vRotation;
+    varying float vPulse;
+    varying float vPulseRate;
+    varying float vBlink;
+    varying vec4 vPosition;
+
+    void main() {
+
+
+        float PI = 3.1415926535897932384626433832795;
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        vColor = color;
+        vTexIndex = texIndex;
+        vSize = size;
+        vAlpha = alpha;
+        vAngle = angle;
+        vRotation = rotation;
+        vPulse = pulse;
+        vPulseRate = pulseRate;
+        vBlink = blink;
+
+        gl_PointSize = ((vSize + (vSize * vPulse * sin(2.0 * PI * vPulseRate * uTime)/2.0)) * (scale / length(mvPosition.xyz)));
+
+        vec3 newPosition = vec3(position.x * sin(uTime), position.y * cos(uTime), position.z * sin(uTime));
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
+
+    }
+</script>
+<script id="fragmentShader" type="x-shader/x-fragment">
+
+    uniform sampler2D textures[maxTextures];
+    uniform float uTime;
+
+    varying vec3 vColor;
+    varying float vTexIndex;
+    varying float vSize;
+    varying float vAlpha;
+    varying float vAngle;
+    varying float vRotation;
+    varying float vPulse;
+    varying float vPulseRate;
+    varying float vBlink;
+
+    void main() {
+        float PI = 3.1415926535897932384626433832795;
+        float a;
+        if (vBlink > 0.0) {a = 0.5*(1.0+sin(2.0 * PI * vBlink * uTime));}
+        else {a = vAlpha;};
+
+        vec4 startColor = vec4(vColor, a);
+
+        vec4 sprite;
+
+        int textureIndex = int(vTexIndex + 0.5);
+
+        float c = cos(radians(vAngle + (360.0 * vRotation * uTime)));
+        float s = sin(radians(vAngle + (360.0 * vRotation * uTime)));
+
+        for (int x = 0; x < maxTextures; x++) { if (x == textureIndex) {
+            vec2 rotatedUV = vec2(c * (gl_PointCoord.x - 0.5) + s * (gl_PointCoord.y - 0.5) + 0.5, 
+                                c * (gl_PointCoord.y - 0.5) - s * (gl_PointCoord.x - 0.5) + 0.5);
+            sprite = texture2D(textures[x], rotatedUV);
+        }};
+
+        gl_FragColor = vec4(startColor * sprite);
+    }
+</script>
+<script>
+function World() {
+    this.init();
+}
+
+World.prototype.init = function () {
+    this.setupEnvironment();
+
+    var scope = this;
+
+    this.callResize = function () {
+        scope.resize();
+    };
+    window.addEventListener('resize', this.callResize, false);
+
+    this.callRender = function () {
+        scope.render();
+        scope.renderID = requestAnimationFrame(scope.callRender);
+    };
+    this.callRender();
+};
+
+World.prototype.setupEnvironment = function () {
+    this.renderer = new THREE.WebGLRenderer({
+    });
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setClearColor(0x000000, 0);
+    this.renderer.domElement.id = "canvas";
+    this.renderer.context.getProgramInfoLog = function () {
+        return ''
+    }; // muzzle
+    document.body.appendChild(this.renderer.domElement);
+
+    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 100000);
+    this.camera.position.set(0, 0, 10000);
+    this.scene = new THREE.Scene();
+
+    this.container = new THREE.Object3D();
+    this.scene.add(this.container);
+
+    var scene = this.scene;
+
+    // CONTROLS
+    controls = new THREE.OrbitControls( this.camera, this.renderer.domElement );
+    // STATS
+    stats = new Stats();
+    stats.domElement.style.position = 'absolute';
+    stats.domElement.style.bottom = '0px';
+    stats.domElement.style.zIndex = 100;
+    this.renderer.domElement.appendChild( stats.domElement );
+
+    var particleCount = 1000000;
+
+    var uniforms = {
+        textures: { type: 'tv', value: this.getTextures() },
+        scale: { type: 'f', value: window.innerHeight / 2 },
+        uTime: { type: 'f', value: 0.0 } 
+    };
+    this.uniforms = uniforms;
+
+    var attributes = {
+        texIndex: { type: 'f', value: [] },
+        color: { type: 'c', value: [] }, 
+        size: { type: 'f', value: [] },
+        alpha: { type: 'f', value: [] },
+        angle: { type: 'f', value: [] }, 
+        rotation: { type: 'f', value: [] },
+        pulse: { type: 'f', value: [] },
+        pulseRate: { type: 'f', value: [] },
+        blink: { type: 'f', value: [] }
+    };
+
+    var defines = {
+        maxTextures: 8 // This is possibly maximum
+    };
+
+    var material = new THREE.ShaderMaterial({
+        uniforms: uniforms,
+        attributes: attributes,
+        defines: defines,
+        vertexShader: document.getElementById('vertexShader').textContent,
+        fragmentShader: document.getElementById('fragmentShader').textContent,
+        transparent: true,
+        lights: false,
+        fog: false,
+        vertexColors: THREE.NoColors 
+    });
+
+    var geometry = new THREE.Geometry();
+
+    for (var i = 0; i < particleCount; i++) {
+        geometry.vertices.push(new THREE.Vector3(
+        (Math.random() - 0.5) * 15000, (Math.random() - 0.5) * 15000, (Math.random() - 0.5) * 15000));
+        attributes.texIndex.value.push(Math.random() * 3 | 0);
+        attributes.color.value.push(new THREE.Color(Math.random(),Math.random(),Math.random()));
+        attributes.size.value.push(Math.random() * 20);
+        attributes.alpha.value.push(Math.random());
+        attributes.angle.value.push(Math.random() * 360); 
+        attributes.rotation.value.push(1 - Math.random()*2); 
+        attributes.pulse.value.push(Math.random()); 
+        attributes.pulseRate.value.push(Math.random()/2); 
+        attributes.blink.value.push(Math.random()); 
+    }
+
+    var particles = new THREE.PointCloud(geometry, material);
+    particles.sortParticles = true;
+    this.container.add(particles);
+};
+
+World.prototype.render = function () {
+    this.container.rotation.x += 0.0001;
+    this.container.rotation.y += 0.0002;
+    this.container.rotation.z += 0.0003;
+    this.uniforms.uTime.value += 0.01;
+    controls.update();
+    stats.update();
+    this.renderer.render(this.scene, this.camera);
+};
+
+World.prototype.resize = function () {
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.camera.aspect = window.innerWidth / window.innerHeight;
+    this.camera.updateProjectionMatrix();
+};
+
+World.prototype.getTextures = function () {
+    return [
+    THREE.ImageUtils.loadTexture('images/ball.png'),
+    THREE.ImageUtils.loadTexture('images/cone.png'),
+    THREE.ImageUtils.loadTexture('images/cube.png') ]
+};
+var world = new World();
+</script>
+</body>

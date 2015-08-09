@@ -16,7 +16,7 @@ var http = require('http').Server(api);
 var io = require('socket.io')(http);
 
 var arc = require('./lib/archetypes.js');
-var ws = require('./lib/webserver.js')(book, now, express, api, http, io, sockets, sectors);
+var ws = require('./lib/webserver.js')(now, express, api, http, io, sockets, sectors);
 var scribe = require('./lib/scribe.js')(redisClient);
 
 function flip(book, interval, lastNow) {
