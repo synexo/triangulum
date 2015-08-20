@@ -40,7 +40,8 @@ function flip(book, interval, lastNow) {
     setTimeout(flip, timeOut, book, interval, startNow);
 };
 
-function page() {
+function Page(id) {
+    this.id = id;
     this.glyphs = [];
     this.scry = function(timePassed) {
         for (var glyph in this.glyphs) {
@@ -64,8 +65,10 @@ function main(book) {
     for (var x=-50; x<50; x++) {
         sectors[x] = {};
         for (var y=-50; y<50; y++) {
-            var testPage = new page();
-            var testGlyph = new arc.matter();
+            var testPage = new Page();
+            testPage.id = {"sector": {"x": x, "y": y}};
+            var testGlyph = new arc.Matter();
+            var testGlyph = new arc.Star({"class": "M"});
             testPage.glyphs.push(testGlyph);
             book.push(testPage);
             sectors[x][y] = testPage;
