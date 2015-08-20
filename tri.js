@@ -68,6 +68,7 @@ function main(book) {
             var testPage = new Page();
             testPage.id = {"sector": {"x": x, "y": y}};
             var testGlyph = new arc.Matter();
+            testPage.glyphs.push(testGlyph);
             var testGlyph = new arc.Star({"class": "M"});
             testPage.glyphs.push(testGlyph);
             book.push(testPage);
