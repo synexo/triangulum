@@ -100,6 +100,20 @@
     }
 </script>
 <script>
+var qs = (function(a) {
+    if (a == "") return {};
+    var b = {};
+    for (var i = 0; i < a.length; ++i)
+    {
+        var p=a[i].split('=', 2);
+        if (p.length == 1)
+            b[p[0]] = "";
+        else
+            b[p[0]] = decodeURIComponent(p[1].replace(/\+/g, " "));
+    }
+    return b;
+})(window.location.search.substr(1).split('&'));
+
 function World() {
     this.init();
 }
@@ -141,16 +155,12 @@ World.prototype.setupEnvironment = function () {
 
     var scene = this.scene;
 
-    // CONTROLS
-    controls = new THREE.OrbitControls( this.camera, this.renderer.domElement );
-    // STATS
-    stats = new Stats();
-    stats.domElement.style.position = 'absolute';
-    stats.domElement.style.bottom = '0px';
-    stats.domElement.style.zIndex = 100;
-    this.renderer.domElement.appendChild( stats.domElement );
+    if (qs["count"] > 0) {var particleCount = qs["count"]}
+    else {var particleCount = 1000000};
 
-    var particleCount = 1000000;
+    if (qs["speed"] > 0) {globalSpeed = qs["speed"]}
+    else {globalSpeed = 1};
+
 
     var uniforms = {
         textures: { type: 'tv', value: this.getTextures() },
@@ -203,8 +213,8 @@ World.prototype.setupEnvironment = function () {
         attributes.pulse.value.push(0); 
         attributes.pulseRate.value.push(0); 
         attributes.blink.value.push(0); 
-        attributes.speed.value.push(Math.random()*100); 
-        attributes.speedLocal.value.push(Math.random()*200 - 100); 
+        attributes.speed.value.push(Math.random()*100*globalSpeed); 
+        attributes.speedLocal.value.push((Math.random()*200 - 100)*globalSpeed); 
     }
 
     var particles = new THREE.PointCloud(geometry, material);
@@ -213,13 +223,11 @@ World.prototype.setupEnvironment = function () {
 };
 
 World.prototype.render = function () {
-    this.container.rotation.x += 0.0001;
-    this.container.rotation.y += 0.0002;
-    this.container.rotation.z += 0.0003;
+    this.container.rotation.x += 0.0001*globalSpeed;
+    this.container.rotation.y += 0.0002*globalSpeed;
+    this.container.rotation.z += 0.0003*globalSpeed;
     this.uniforms.uTime.value += 0.01;
-    this.camera.position.z = 1000 + Math.abs(Math.sin(this.uniforms.uTime.value/10))*7500;
-    controls.update();
-    stats.update();
+    this.camera.position.z = 1000 + Math.abs(Math.sin(this.uniforms.uTime.value/10))*7500*globalSpeed;
     this.renderer.render(this.scene, this.camera);
 };
 
