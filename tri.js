@@ -67,9 +67,9 @@ function main(book) {
         for (var y=-50; y<50; y++) {
             var testPage = new Page();
             testPage.id = {"sector": {"x": x, "y": y}};
-            var testGlyph = new arc.Matter();
+            var testGlyph = new arc.Matter({"age": 0});
             testPage.glyphs.push(testGlyph);
-            var testGlyph = new arc.Star({"class": "M"});
+            var testGlyph = new arc.Star();
             testPage.glyphs.push(testGlyph);
             book.push(testPage);
             sectors[x][y] = testPage;
