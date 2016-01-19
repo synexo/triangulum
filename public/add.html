@@ -1,0 +1,458 @@
+<body>
+<script type="text/javascript" src="./three.min.js"></script>
+<script type="text/javascript" src="./stats.min.js"></script>
+<script type="text/javascript" src="./keyboard.js"></script>
+
+<script type="application/x-glsl" id="sky-vertex">
+varying vec2 vUV;
+
+void main() {
+  vUV = uv;
+  vec4 pos = vec4(position, 1.0);
+  gl_Position = projectionMatrix * modelViewMatrix * pos;
+}
+</script>
+
+<script type="application/x-glsl" id="sky-fragment">
+uniform sampler2D texture;
+varying vec2 vUV;
+
+void main() {
+  vec4 sample = texture2D(texture, vUV);
+  gl_FragColor = vec4(sample.xyz, sample.w);
+}
+</script>
+
+
+<script id="vertexShader" type="x-shader/x-vertex">
+    uniform float scale;
+    uniform float uTime;
+
+    attribute vec3 color;
+    attribute float texIndex;
+    attribute float size;
+    attribute float alpha;
+    attribute float angle;
+    attribute float rotation;
+    attribute float blink;
+    attribute float pulse;
+    attribute float orbitDistance;
+    attribute float orbitSpeed;
+    attribute float focus;
+
+    varying vec3 vColor;
+    varying float vTexIndex;
+    varying float vSize;
+    varying float vAlpha;
+    varying float vAngle;
+    varying float vRotation;
+    varying float vBlink;
+    varying float vPulse;
+    varying float vOrbitDistance;
+    varying float vOrbitSpeed;
+    varying float vFocus;
+
+    void main() {
+        precision mediump float;
+        float PI = 3.1415926535897932384626433832795;
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        vColor = color;
+        vTexIndex = texIndex;
+        vSize = size;
+        vAlpha = alpha;
+        vAngle = angle;
+        vRotation = rotation;
+        vBlink = blink;
+        vPulse = pulse;
+        vOrbitDistance = orbitDistance;
+        vOrbitSpeed = orbitSpeed;
+        vFocus = focus;
+
+        gl_PointSize = (vSize * scale) / length(mvPosition.xyz);
+
+
+        if (vPulse > 0.0) {
+        if (gl_PointSize < 2.0) {gl_PointSize = 2.0;};
+        if (gl_PointSize > 30.0) {vColor = vColor + vColor * abs(sin((uTime/10.0)));};
+        if (gl_PointSize > 30.0) {gl_PointSize = gl_PointSize + gl_PointSize * abs(sin((uTime/10.0))) / 10.0;};
+        vFocus = 1.0;
+        }
+
+        if (gl_PointSize < 2.0) {vColor=vColor * 0.0;};
+
+        float orbitTime = uTime * 0.1;
+        vec3 newPosition = vec3(position.x + (vOrbitDistance*cos(orbitTime*vOrbitSpeed)-vOrbitDistance*sin(orbitTime*vOrbitSpeed)),
+                                position.y + (vOrbitDistance*sin(orbitTime*vOrbitSpeed)+vOrbitDistance*cos(orbitTime*vOrbitSpeed)),
+                                position.z);
+
+    
+        mvPosition = modelViewMatrix * vec4(newPosition, 1.0);
+
+        //gl_PointSize = 2.0;
+        gl_Position = projectionMatrix * mvPosition;
+    }
+</script>
+<script id="fragmentShader" type="x-shader/x-fragment">
+
+    uniform sampler2D textures;
+    uniform float uTime;
+    uniform float xTextures;
+    uniform float yTextures;
+
+    varying vec3 vColor;
+    varying float vTexIndex;
+    varying float vSize;
+    varying float vAlpha;
+    varying float vAngle;
+    varying float vRotation;
+    varying float vBlink;
+
+    void main() {
+        precision mediump float;
+        float PI = 3.1415926535897932384626433832795;
+        float a;
+        if (vBlink > 0.0) {a = 0.5*(1.0+sin(2.0 * PI * vBlink * uTime));}
+        else {a = vAlpha;};
+
+        vec4 startColor = vec4(vColor, a);
+
+        vec4 sprite;
+
+        float c = cos(radians(vAngle + (360.0 * vRotation * uTime)));
+        float s = sin(radians(vAngle + (360.0 * vRotation * uTime)));
+
+        //Add index, multiple for size? i.e. 0.9 + gl_PC.x * 1.0 for last of 10 images on X?
+        //To find y of index, Floor of index. For x of index, modulo of index.
+        int textureInt = int(vTexIndex + 0.5);
+        float tI = float(textureInt);
+        float yM = 1.0 / yTextures;
+        float xM = 1.0 / xTextures;
+        float yI = floor(tI / xTextures);
+        float xI = mod(tI, xTextures);
+        //vec2 subTexture = vec2(xM*xI + gl_PointCoord.x * xM, yM*yI + gl_PointCoord.y * yM);
+        float midX = xM*0.5 + (xM*xI) ;
+        float midY = yM*0.5 + (yM*yI) ;
+        float ratioXY = yTextures / xTextures;
+
+        vec2 subTexture = vec2((c * ratioXY * (xM*xI + gl_PointCoord.x * xM - midX) + s * ratioXY * (yM*yI + gl_PointCoord.y * yM - midY) + midX) * 1.0,
+                          (c * (yM*yI + gl_PointCoord.y * yM - midY) - s * (xM*xI + gl_PointCoord.x * xM - midX) + midY) * 1.0);
+
+
+        sprite = texture2D(textures, subTexture);
+        gl_FragColor = vec4(startColor * sprite);
+        if (gl_FragColor.w < 0.5) discard;
+
+            }
+</script>
+<script>
+
+ stats = new Stats();
+ document.body.appendChild( stats.domElement );  
+
+moveScale = 1000;
+function userControls() {
+    if (Key.isDown(Key.W)) {
+        camera.position.z += 0-moveScale;
+    }
+    if (Key.isDown(Key.S)) {
+        camera.position.z += moveScale;
+    }
+    if (Key.isDown(Key.D)) {
+        camera.position.x += moveScale;
+    }
+    if (Key.isDown(Key.A)) {
+        camera.position.x += 0-moveScale;
+    }
+    if (Key.isDown(Key.R)) {
+        camera.position.y += moveScale;
+    }
+    if (Key.isDown(Key.F)) {
+        camera.position.y += 0-moveScale;
+    }
+
+    if (Key.isDown(Key.LA)) {
+        camera.rotation.y += 0.005;
+    }
+
+    if (Key.isDown(Key.RA)) {
+        camera.rotation.y += 0 - 0.005;
+    }
+
+    if (Key.isDown(Key.O)) {
+        moveScale += -1;
+        if (moveScale < 1) {moveScale = 1;};
+    }
+    if (Key.isDown(Key.P)) {
+        moveScale += 1;
+        if (moveScale < 1) {moveScale = 1;};
+    }
+
+}
+
+function World() {
+    this.init();
+}
+
+var SkyDome = function() {
+    var geometry = new THREE.SphereGeometry(200000, 64, 32);
+    var uniforms = {
+        texture: { type: 't', value: THREE.ImageUtils.loadTexture('./eso_dark.jpg') }
+    };
+
+    var material = new THREE.ShaderMaterial( {
+        uniforms:       uniforms,
+        vertexShader:   document.getElementById('sky-vertex').textContent,
+        fragmentShader: document.getElementById('sky-fragment').textContent
+    });
+
+    this.mesh = new THREE.Mesh(geometry, material);
+    this.mesh.scale.set(-1, 1, 1);
+    this.mesh.rotation.Order = 'XZY';
+    this.mesh.renderDepth = 1000.0;
+}
+
+World.prototype.init = function () {
+    this.setupEnvironment();
+
+    var scope = this;
+
+    this.callResize = function () {
+        scope.resize();
+    };
+    window.addEventListener('resize', this.callResize, false);
+
+    this.callRender = function () {
+        scope.render();
+        scope.renderID = requestAnimationFrame(scope.callRender);
+    };
+    this.callRender();
+};
+
+World.prototype.setupEnvironment = function () {
+    this.renderer = new THREE.WebGLRenderer({
+    logarithmicDepthBuffer: true
+    });
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setClearColor(0x000000, 0);
+    this.renderer.domElement.id = "canvas";
+    this.renderer.context.getProgramInfoLog = function () {
+        return ''
+    }; // muzzle
+    document.body.appendChild(this.renderer.domElement);
+
+    this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 5000000);
+    this.camera.position.set(0, 0, 20000);
+    this.scene = new THREE.Scene();
+
+    this.container = new THREE.Object3D();
+    this.scene.add(this.container);
+
+    var scene = this.scene;
+
+    galaxy = new SkyDome();
+    scene.add(galaxy.mesh);
+
+    var particleCount = 10000;
+
+    var uniforms = {
+        textures: { type: 'tv', value: this.getTextures() },
+        xTextures: { type: 'f', value: 5.0 },
+        yTextures: { type: 'f', value: 4.0 },
+        scale: { type: 'f', value: window.innerHeight / 2 },
+        uTime: { type: 'f', value: 0.0 } 
+    };
+    this.uniforms = uniforms;
+
+    var attributes = {
+        texIndex: { type: 'f', value: [] },
+        color: { type: 'c', value: [] }, 
+        size: { type: 'f', value: [] },
+        alpha: { type: 'f', value: [] },
+        angle: { type: 'f', value: [] }, 
+        rotation: { type: 'f', value: [] },
+        blink: { type: 'f', value: [] },
+        pulse: { type: 'f', value: [] },
+        orbitDistance: { type: 'f', value: [] },
+        orbitSpeed: { type: 'f', value: [] },
+        focus: { type: 'f', value: [] }
+    };
+
+    var defines = {
+    };
+
+    var material = new THREE.ShaderMaterial({
+        uniforms: uniforms,
+        attributes: attributes,
+        defines: defines,
+        vertexShader: document.getElementById('vertexShader').textContent,
+        fragmentShader: document.getElementById('fragmentShader').textContent,
+        transparent: true,
+        lights: false,
+        fog: false,
+        vertexColors: THREE.NoColors 
+    });
+
+    var geometry = new THREE.Geometry();
+
+    for (var i = 0; i < particleCount; i++) {
+        var coX = (Math.random() - 0.5) * 500000;
+        var coY = (Math.random() - 0.5) * 500000;
+        var coZ = 10000 - Math.random() * 500000;
+        geometry.vertices.push(new THREE.Vector3(coX, coY, coZ));
+        attributes.texIndex.value.push(Math.floor(Math.random() * 20));
+        attributes.color.value.push(new THREE.Color(Math.random(),Math.random(),Math.random()));
+        attributes.size.value.push(300 + Math.random()*300);
+        attributes.alpha.value.push(1);
+        attributes.angle.value.push(Math.random()*360); 
+        attributes.rotation.value.push(Math.random()*.001); 
+        attributes.blink.value.push(0); 
+        attributes.pulse.value.push(2.0); 
+        attributes.orbitDistance.value.push(0); 
+        attributes.orbitSpeed.value.push(0); 
+        attributes.focus.value.push(0); 
+
+// planet test
+        if (Math.random() < 1.0) {
+            var numPlanets = Math.floor(Math.random() * 10)
+            for (var p = 0; p < numPlanets; p++) {
+                geometry.vertices.push(new THREE.Vector3(coX, coY, coZ));
+                attributes.texIndex.value.push(Math.floor(Math.random() * 20));
+                attributes.color.value.push(new THREE.Color(Math.random(),Math.random(),Math.random()));
+                attributes.size.value.push(100 + Math.random()*200);
+                attributes.alpha.value.push(1);
+                attributes.angle.value.push(Math.random()*360); 
+                attributes.rotation.value.push(Math.random()*.001); 
+                attributes.blink.value.push(0); 
+                attributes.pulse.value.push(0); 
+                attributes.orbitDistance.value.push(100 + Math.random()*100*p); 
+                attributes.orbitSpeed.value.push(Math.random()/p); 
+                attributes.focus.value.push(0); 
+            };
+        };
+    }
+
+    var particles = new THREE.PointCloud(geometry, material);
+    particles.sortParticles = true;
+    this.container.add(particles);
+};
+
+World.prototype.render = function () {
+/*
+    for (var vertice in this.container.children[0].geometry.vertices) {
+        var v = this.container.children[0].geometry.vertices[vertice];
+        v['x'] = v['x'] += 0.5 - Math.random() * 1;
+        v['y'] = v['y'] += 0.5 - Math.random() * 1;
+        v['z'] = v['z'] += 0.5 - Math.random() * 1;
+    };
+*/
+    if ( this.container.children[0].geometry.vertices.length < 0) {
+    var geometry = new THREE.Geometry();
+    geometry.vertices = this.container.children[0].geometry.vertices;
+
+    //console.log(geometry.vertices.length)
+    var uniforms = {
+        textures: { type: 'tv', value: this.getTextures() },
+        xTextures: { type: 'f', value: 14.0 },
+        yTextures: { type: 'f', value: 14.0 },
+        scale: { type: 'f', value: window.innerHeight / 2 },
+        uTime: { type: 'f', value: this.uniforms.uTime.value } 
+    };
+
+    var attributes = {
+        texIndex: { type: 'f', value: [] },
+        color: { type: 'c', value: [] }, 
+        size: { type: 'f', value: [] },
+        alpha: { type: 'f', value: [] },
+        angle: { type: 'f', value: [] }, 
+        rotation: { type: 'f', value: [] },
+        blink: { type: 'f', value: [] }
+    };
+
+    var defines = {
+        // you can put constants here
+    };
+
+    var material = new THREE.ShaderMaterial({
+        uniforms: uniforms,
+        attributes: attributes,
+        defines: defines,
+        vertexShader: document.getElementById('vertexShader').textContent,
+        fragmentShader: document.getElementById('fragmentShader').textContent,
+        transparent: true,
+        lights: false,
+        fog: false,
+        vertexColors: THREE.NoColors 
+    });
+
+
+    var newX = (Math.random() - 0.5) * 1500;
+    var newY = (Math.random() - 0.5) * 1500;
+    var newZ = -100;
+
+    geometry.vertices.push(new THREE.Vector3(newX, newY, newZ));
+
+    material.attributes.texIndex.value = this.container.children[0].material.attributes.texIndex.value;
+    material.attributes.color.value = this.container.children[0].material.attributes.color.value;
+    material.attributes.size.value = this.container.children[0].material.attributes.size.value;
+    material.attributes.alpha.value = this.container.children[0].material.attributes.alpha.value;
+    material.attributes.angle.value = this.container.children[0].material.attributes.angle.value;
+    material.attributes.rotation.value = this.container.children[0].material.attributes.rotation.value;
+    material.attributes.blink.value = this.container.children[0].material.attributes.blink.value;
+
+
+    material.attributes.texIndex.value.push(Math.floor(Math.random() * 196));
+    material.attributes.color.value.push(new THREE.Color(Math.random(),Math.random(),Math.random()));
+    material.attributes.size.value.push(20);
+    material.attributes.alpha.value.push(1);
+    material.attributes.angle.value.push(Math.random() * 360); 
+    material.attributes.rotation.value.push(0); 
+    material.attributes.blink.value.push(0); 
+    this.container.remove(this.container.children[0]);
+    this.container.add(new THREE.PointCloud(geometry, material));
+
+    }
+    // REF for actual updates https://github.com/mrdoob/three.js/wiki/Updates
+    
+    //this.container.rotation.x += 0.001;
+    //this.container.rotation.y += 0.002;
+    //this.container.rotation.z += 0.003;
+    //this.camera.position.x = 0 + (Math.sin(this.uniforms.uTime.value/2000))*250000;
+    //this.camera.position.y = 0 + (Math.sin(this.uniforms.uTime.value/3000))*250000;
+    //this.camera.position.z = 0 + (Math.sin(this.uniforms.uTime.value/5000))*250000;
+    this.uniforms.uTime.value += 0.1;
+    camera = this.camera;
+
+    //follow = Math.floor((this.uniforms.uTime.value) % 20000);
+    //this.camera.position.x = this.container.children[0].geometry.vertices[follow].x;
+    //this.camera.position.y = this.container.children[0].geometry.vertices[follow].y;
+    //this.camera.position.z = this.container.children[0].geometry.vertices[follow].z - 20;
+
+    //for (i in this.container.children[0].geometry.vertices){
+    //    if (this.container.children[0].material.attributes.focus.value[i] > 0)
+    //        {console.log(this.container.children[0].material.attributes.focus.value[i]);};
+    //}
+    //console.log(this.container.children[0].material.attributes.focus.value.indexOf( 1.0 ));;
+    userControls();
+
+    this.container.children[0].geometry.verticesNeedUpdate = true;
+    this.renderer.render(this.scene, this.camera);
+    stats.update();    
+};
+
+World.prototype.resize = function () {
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.camera.aspect = window.innerWidth / window.innerHeight;
+    this.camera.updateProjectionMatrix();
+};
+
+World.prototype.getTextures = function () {
+    return [
+    THREE.ImageUtils.loadTexture('./suns.png')];
+    //THREE.ImageUtils.loadTexture('./ball.png')];
+    //THREE.ImageUtils.loadTexture('./ships.png')];
+    //THREE.ImageUtils.loadTexture('./ball.png'),
+    //THREE.ImageUtils.loadTexture('./cone.png'),
+};
+var world = new World();
+</script>
+</body>

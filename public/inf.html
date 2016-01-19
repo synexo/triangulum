@@ -1,0 +1,213 @@
+<body>
+<script type="text/javascript" src="js/three.min.js"></script>
+<script type="text/javascript" src="./stats.min.js"></script>
+<script type="text/javascript" src="./keyboard.js"></script>
+
+<script id="vertexShader" type="x-shader/x-vertex">
+    uniform vec3 viewerPos;
+    uniform float scale;
+    uniform float uTime;
+    uniform float modScale;
+
+    attribute vec3 color;
+    attribute float size;
+
+    varying vec3 vColor;
+    varying float vSize;
+
+    void main() {
+
+        float PI = 3.1415926535897932384626433832795;
+        vColor = color;
+        vSize = size;
+
+        float midScale = modScale / 2.0;
+        float modX = midScale - mod(position.x + viewerPos.x - midScale, modScale);
+        float modY = midScale - mod(position.y + viewerPos.y - midScale, modScale);
+        float modZ = midScale - mod(position.z + viewerPos.z - midScale, modScale);
+
+        float floorX = floor((midScale - viewerPos.x) / modScale);
+
+        //float test = 1.0 + mod(floorX, 4.0);
+        //vColor = vColor / test;
+
+        vec3 modPosition = vec3(modX, modY, modZ);
+        vec4 mvPosition = modelViewMatrix * vec4(modPosition, 1.0);
+
+        gl_PointSize = vSize * (scale / length(modPosition.xyz));
+        float brightness = scale / length(modPosition.xyz);
+        vColor = vColor * brightness;
+
+        gl_Position = projectionMatrix * modelViewMatrix * mvPosition;
+    }
+</script>
+<script id="fragmentShader" type="x-shader/x-fragment">
+    uniform vec3 viewerPos;
+    uniform float uTime;
+
+    varying vec3 vColor;
+
+    void main() {
+        float PI = 3.1415926535897932384626433832795;
+
+        vec4 startColor = vec4(vColor, 1.0);
+
+        gl_FragColor = vec4(startColor);
+        if (gl_FragColor.w < 0.5) discard;
+    }
+</script>
+<script>
+
+function World() {
+    this.init();
+}
+
+stats = new Stats();
+document.body.appendChild( stats.domElement ); 
+
+moveScale = 1;
+function userControls() {
+    if (Key.isDown(Key.W)) {
+        viewerPos.z += 0-moveScale;
+    }
+    if (Key.isDown(Key.S)) {
+        viewerPos.z += moveScale;
+    }
+    if (Key.isDown(Key.D)) {
+        viewerPos.x += moveScale;
+    }
+    if (Key.isDown(Key.A)) {
+        viewerPos.x += 0-moveScale;
+    }
+    if (Key.isDown(Key.R)) {
+        viewerPos.y += moveScale;
+    }
+    if (Key.isDown(Key.F)) {
+        viewerPos.y += 0-moveScale;
+    }
+
+    if (Key.isDown(Key.LA)) {
+        camera.rotation.y += 0.05;
+    }
+
+    if (Key.isDown(Key.RA)) {
+        camera.rotation.y += 0 - 0.05;
+    }
+
+    if (Key.isDown(Key.O)) {
+        moveScale += -1;
+        if (moveScale < 1) {moveScale = 1;};
+    }
+    if (Key.isDown(Key.P)) {
+        moveScale += 1;
+        if (moveScale < 1) {moveScale = 1;};
+    }
+
+}
+
+
+World.prototype.init = function () {
+    this.setupEnvironment();
+
+    var scope = this;
+
+    this.callResize = function () {
+        scope.resize();
+    };
+    window.addEventListener('resize', this.callResize, false);
+
+    this.callRender = function () {
+        scope.render();
+        scope.renderID = requestAnimationFrame(scope.callRender);
+    };
+    this.callRender();
+};
+
+World.prototype.setupEnvironment = function () {
+    this.renderer = new THREE.WebGLRenderer({
+    });
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setClearColor(0x000000, 0);
+    this.renderer.domElement.id = "canvas";
+    this.renderer.context.getProgramInfoLog = function () {
+        return ''
+    }; // muzzle
+    document.body.appendChild(this.renderer.domElement);
+
+    this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 1000000);
+    this.camera.position.set(0, 0, 0);
+    this.scene = new THREE.Scene();
+
+    this.container = new THREE.Object3D();
+    this.scene.add(this.container);
+
+    var scene = this.scene;
+
+    particleCount = 100000;
+    worldScale = 10000;
+    xScale = worldScale;
+    yScale = worldScale / 5;
+    zScale = worldScale;
+
+    var uniforms = {
+        scale: { type: 'f', value: window.innerHeight / 2 },
+        modScale: { type: 'f', value: worldScale },
+        viewerPos: { type: 'v3', value: new THREE.Vector3( 0, 0, 0 ) },
+        uTime: { type: 'f', value: 0.0 } 
+    };
+    this.uniforms = uniforms;
+
+    var attributes = {
+        texIndex: { type: 'f', value: [] },
+        color: { type: 'c', value: [] }, 
+        size: { type: 'f', value: [] }
+    };
+
+    var defines = {
+        maxTextures: 8 // This is possibly maximum
+    };
+
+    var material = new THREE.ShaderMaterial({
+        uniforms: uniforms,
+        attributes: attributes,
+        defines: defines,
+        vertexShader: document.getElementById('vertexShader').textContent,
+        fragmentShader: document.getElementById('fragmentShader').textContent,
+        transparent: true,
+        lights: false,
+        fog: false,
+        vertexColors: THREE.NoColors 
+    });
+
+    var geometry = new THREE.Geometry();
+
+    for (var i = 0; i < particleCount; i++) {
+        geometry.vertices.push(new THREE.Vector3(
+        xScale/2-Math.random()*xScale,yScale/2-Math.random()*yScale,zScale/2-Math.random()*zScale));
+        attributes.color.value.push(new THREE.Color(1.0,1.0,1.0));
+        attributes.size.value.push(5);
+    }
+
+    var particles = new THREE.PointCloud(geometry, material);
+    particles.sortParticles = true;
+    this.container.add(particles);
+};
+
+World.prototype.render = function () {
+    this.uniforms.uTime.value += 0.01;
+    camera = this.camera;
+    viewerPos = this.uniforms.viewerPos.value;
+    userControls();
+    stats.update();
+    this.renderer.render(this.scene, this.camera);
+};
+
+World.prototype.resize = function () {
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.camera.aspect = window.innerWidth / window.innerHeight;
+    this.camera.updateProjectionMatrix();
+};
+
+var world = new World();
+</script>
+</body>

@@ -1,5 +1,5 @@
 <body>
-<script type="text/javascript" src="js/three.min.js"></script>
+<script type="text/javascript" src="./three.min.js"></script>
 <script id="vertexShader" type="x-shader/x-vertex">
     uniform float scale;
     uniform float uTime;
@@ -59,10 +59,13 @@
         gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
     }
 </script>
+
 <script id="fragmentShader" type="x-shader/x-fragment">
 
-    uniform sampler2D textures[maxTextures];
+    uniform sampler2D textures;
     uniform float uTime;
+    uniform float xTextures;
+    uniform float yTextures;
 
     varying vec3 vColor;
     varying float vTexIndex;
@@ -75,6 +78,7 @@
     varying float vBlink;
 
     void main() {
+        precision mediump float;
         float PI = 3.1415926535897932384626433832795;
         float a;
         if (vBlink > 0.0) {a = 0.5*(1.0+sin(2.0 * PI * vBlink * uTime));}
@@ -84,36 +88,26 @@
 
         vec4 sprite;
 
-        int textureIndex = int(vTexIndex + 0.5);
 
         float c = cos(radians(vAngle + (360.0 * vRotation * uTime)));
         float s = sin(radians(vAngle + (360.0 * vRotation * uTime)));
 
-        for (int x = 0; x < maxTextures; x++) { if (x == textureIndex) {
-            vec2 rotatedUV = vec2(c * (gl_PointCoord.x - 0.5) + s * (gl_PointCoord.y - 0.5) + 0.5, 
-                                c * (gl_PointCoord.y - 0.5) - s * (gl_PointCoord.x - 0.5) + 0.5);
-            sprite = texture2D(textures[x], rotatedUV);
-        }};
+        //Add index, multiple for size? i.e. 0.9 + gl_PC.x * 1.0 for last of 10 images on X?
+        //To find y of index, Floor of index. For x of index, modulo of index.
+        int textureInt = int(vTexIndex + 0.5);
+        float tI = float(textureInt);
+        float yM = 1.0 / yTextures;
+        float xM = 1.0 / xTextures;
+        float yI = floor(tI / xTextures);
+        float xI = mod(tI, xTextures);
+        vec2 subTexture = vec2(xM*xI + gl_PointCoord.x * xM, yM*yI + gl_PointCoord.y * yM);
+        sprite = texture2D(textures, subTexture);
 
         gl_FragColor = vec4(startColor * sprite);
         if (gl_FragColor.w < 0.5) discard;
     }
 </script>
 <script>
-var qs = (function(a) {
-    if (a == "") return {};
-    var b = {};
-    for (var i = 0; i < a.length; ++i)
-    {
-        var p=a[i].split('=', 2);
-        if (p.length == 1)
-            b[p[0]] = "";
-        else
-            b[p[0]] = decodeURIComponent(p[1].replace(/\+/g, " "));
-    }
-    return b;
-})(window.location.search.substr(1).split('&'));
-
 function World() {
     this.init();
 }
@@ -146,8 +140,8 @@ World.prototype.setupEnvironment = function () {
     }; // muzzle
     document.body.appendChild(this.renderer.domElement);
 
-    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 100000);
-    this.camera.position.set(0, 0, 10000);
+    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 10000);
+    this.camera.position.set(0, 0, 100);
     this.scene = new THREE.Scene();
 
     this.container = new THREE.Object3D();
@@ -155,15 +149,12 @@ World.prototype.setupEnvironment = function () {
 
     var scene = this.scene;
 
-    if (qs["count"] > 0) {var particleCount = qs["count"]}
-    else {var particleCount = 1000000};
-
-    if (qs["speed"] > 0) {globalSpeed = qs["speed"]}
-    else {globalSpeed = 1};
-
+    var particleCount = 10000;
 
     var uniforms = {
         textures: { type: 'tv', value: this.getTextures() },
+        xTextures: { type: 'f', value: 14.0 },
+        yTextures: { type: 'f', value: 14.0 },
         scale: { type: 'f', value: window.innerHeight / 2 },
         uTime: { type: 'f', value: 0.0 } 
     };
@@ -178,13 +169,11 @@ World.prototype.setupEnvironment = function () {
         rotation: { type: 'f', value: [] },
         pulse: { type: 'f', value: [] },
         pulseRate: { type: 'f', value: [] },
-        blink: { type: 'f', value: [] },
-        speed: { type: 'f', value: [] },
-        speedLocal: { type: 'f', value: [] }
+        blink: { type: 'f', value: [] }
     };
 
     var defines = {
-        maxTextures: 8 // This is possibly maximum
+        // you can put constants here
     };
 
     var material = new THREE.ShaderMaterial({
@@ -203,18 +192,16 @@ World.prototype.setupEnvironment = function () {
 
     for (var i = 0; i < particleCount; i++) {
         geometry.vertices.push(new THREE.Vector3(
-        (Math.random() - 0.5) * 25000, (Math.random() - 0.5) * 1000, (Math.random() - 0.5) * 25000));
-        attributes.texIndex.value.push(Math.random() * 3 | 0);
+        (Math.random() - 0.5) * 1500, (Math.random() - 0.5) * 1500, (Math.random() - 0.5) * 15));
+        attributes.texIndex.value.push(Math.floor(Math.random() * 196));
         attributes.color.value.push(new THREE.Color(Math.random(),Math.random(),Math.random()));
-        attributes.size.value.push(Math.random() * 50);
+        attributes.size.value.push(Math.random() * 20);
         attributes.alpha.value.push(1);
         attributes.angle.value.push(Math.random() * 360); 
-        attributes.rotation.value.push(1 - Math.random()*2); 
+        attributes.rotation.value.push(0); 
         attributes.pulse.value.push(0); 
         attributes.pulseRate.value.push(0); 
         attributes.blink.value.push(0); 
-        attributes.speed.value.push(Math.random()*100*globalSpeed); 
-        attributes.speedLocal.value.push((Math.random()*200 - 100)*globalSpeed); 
     }
 
     var particles = new THREE.PointCloud(geometry, material);
@@ -223,11 +210,10 @@ World.prototype.setupEnvironment = function () {
 };
 
 World.prototype.render = function () {
-    this.container.rotation.x += 0.0001*globalSpeed;
-    this.container.rotation.y += 0.0002*globalSpeed;
-    this.container.rotation.z += 0.0003*globalSpeed;
-    this.uniforms.uTime.value += 0.01;
-    this.camera.position.z = 1000 + Math.abs(Math.sin(this.uniforms.uTime.value/10))*7500*globalSpeed;
+    this.container.rotation.x += 0.001;
+    this.container.rotation.y += 0.002;
+    this.container.rotation.z += 0.003;
+    this.uniforms.uTime.value += 0.1;
     this.renderer.render(this.scene, this.camera);
 };
 
@@ -239,9 +225,10 @@ World.prototype.resize = function () {
 
 World.prototype.getTextures = function () {
     return [
-    THREE.ImageUtils.loadTexture('images/ball.png'),
-    THREE.ImageUtils.loadTexture('images/cone.png'),
-    THREE.ImageUtils.loadTexture('images/cube.png') ]
+    THREE.ImageUtils.loadTexture('./ships.png'),
+    //THREE.ImageUtils.loadTexture('./ball.png'),
+    THREE.ImageUtils.loadTexture('./cone.png'),
+    THREE.ImageUtils.loadTexture('./cube.png') ]
 };
 var world = new World();
 </script>
